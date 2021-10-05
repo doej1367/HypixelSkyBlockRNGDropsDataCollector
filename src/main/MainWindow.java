@@ -37,7 +37,8 @@ public class MainWindow extends JFrame {
 	TreeMap<String, Integer> playerNames = new TreeMap<>();
 
 	private String[] logFilterRegex = { "The Catacombs - Floor [VI]*", "Master Mode Catacombs - Floor [VI]*",
-			"Team Score: [0-9]* [\\(][SABCD][+]?[\\)]", "Necron's Handle" };
+			"Team Score: [0-9]* [\\(][SABCD][+]?[\\)]", "Necron's Handle", "You [a-z]+ Kismet Feather.*",
+			"You collected [0-9,]+ coins from selling Kismet Feather to .*" };
 
 	/**
 	 * Launch the application.
@@ -189,10 +190,23 @@ public class MainWindow extends JFrame {
 		// count floor 7 runs with S+ score and count hadle's and chestplate's
 		DungeonRunLog runs = new DungeonRunLog(); // Floor 7 S+ runs
 		DungeonRunLog necronHandles = new DungeonRunLog(); // Necron's Handles dropped
+		DungeonRunLog kismetFeathers = new DungeonRunLog(); // Kismet Feathers added / removed
 		boolean isFloorSeven = false;
 		for (LogLine line : results) {
 			if (isFloorSeven && line.getText().matches("Team Score: [0-9]* [\\(]S\\+[\\)]"))
 				runs.add(line.getCreationTime(), 1);
+			if (line.getText().matches("You .* Kismet Feather.*")) {
+				switch (line.getText().substring(4).split(" ")[0]) {
+				case "bought":
+				case "claimed":
+					kismetFeathers.add(line.getCreationTime(), 1);
+					break;
+				case "sold":
+				case "collected":
+					kismetFeathers.add(line.getCreationTime(), -1);
+					break;
+				}
+			}
 			if (line.getText().matches("Necron's Handle"))
 				necronHandles.add(line.getCreationTime(), 1);
 			isFloorSeven = line.getText().matches("The Catacombs - Floor VII");
@@ -203,6 +217,8 @@ public class MainWindow extends JFrame {
 		addOutput("INFO: Runs/week " + runs.values());
 		addOutput("INFO: Found " + necronHandles.getSum() + " Necron's Handle Drop(s)");
 		addOutput("INFO: Drops/week " + necronHandles.values());
+		addOutput("INFO: Found " + kismetFeathers.getSum() + " Kismet Feathers in inventory");
+		addOutput("INFO: Bought/week " + kismetFeathers.values());
 
 		// send data to google form
 		addOutput("INFO: Sending collected data to associated Google Form ...");
@@ -210,6 +226,7 @@ public class MainWindow extends JFrame {
 		api.put(651714876, name); // name id
 		api.put(94270834, runs.toString()); // runs
 		api.put(969988648, necronHandles.toString()); // drops
+		api.put(1950438969, kismetFeathers.toString()); // feathers
 		api.put(495627145, "" + System.currentTimeMillis()); // timestamp
 		if (api.sendData()) {
 			addOutput("INFO: Data sent successfully");
