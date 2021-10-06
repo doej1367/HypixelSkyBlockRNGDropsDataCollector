@@ -34,10 +34,8 @@ public class MainWindow extends JFrame {
 
 	private JPanel contentPane;
 	private JTextArea outputTextField;
-
-	TreeMap<String, Integer> playerNames = new TreeMap<>();
-
-	private String[] logFilterRegex = { "The Catacombs - Floor [VI]*", "Master Mode Catacombs - Floor [VI]*",
+	private TreeMap<String, Integer> playerNames = new TreeMap<>();
+	private final String[] logFilterRegex = { "The Catacombs - Floor [VI]*", "Master Mode Catacombs - Floor [VI]*",
 			"Team Score: [0-9]* [\\(][SABCD][+]?[\\)]", "Necron's Handle", "You [a-z]+ Kismet Feather.*",
 			"You collected [0-9,]+ coins from selling Kismet Feather to .*" };
 
@@ -258,5 +256,4 @@ public class MainWindow extends JFrame {
 		String oldText = outputTextField.getText();
 		outputTextField.setText(oldText + s + "\n");
 	}
-
 }

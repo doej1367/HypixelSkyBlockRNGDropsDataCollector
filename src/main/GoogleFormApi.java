@@ -34,7 +34,5 @@ public class GoogleFormApi {
 		} catch (IOException ignored) {
 		}
 		return false;
-
 	}
-
 }

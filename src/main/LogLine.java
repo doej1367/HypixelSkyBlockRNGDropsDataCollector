@@ -5,7 +5,6 @@ package main;
  * @author doej1367
  */
 public class LogLine {
-
 	private long creationTime;
 	private String text;
 
@@ -21,5 +20,4 @@ public class LogLine {
 	public String getText() {
 		return text;
 	}
-
 }
