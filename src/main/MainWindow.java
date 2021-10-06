@@ -2,25 +2,21 @@ package main;
 
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.file.Files;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
-import java.util.zip.GZIPInputStream;
-
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
+
+import util.DungeonRunLog;
+import util.GoogleFormApi;
+import util.MinecraftLogLine;
+import util.MinecraftLogFile;
+import util.OSFileSystem;
 import javax.swing.JTextArea;
 import java.awt.Font;
 import javax.swing.JScrollPane;
@@ -31,36 +27,10 @@ import javax.swing.JScrollPane;
  */
 public class MainWindow extends JFrame {
 	private static final long serialVersionUID = 1L;
+	private static MainWindow mainWindow;
 
 	private JPanel contentPane;
 	private JTextArea outputTextField;
-	private TreeMap<String, Integer> playerNames = new TreeMap<>();
-	private final String[] logFilterRegex = { "The Catacombs - Floor [VI]*", "Master Mode Catacombs - Floor [VI]*",
-			"Team Score: [0-9]* [\\(][SABCD][+]?[\\)]", "Necron's Handle", "You [a-z]+ Kismet Feather.*",
-			"You collected [0-9,]+ coins from selling Kismet Feather to .*" };
-
-	/**
-	 * Launch the application.
-	 */
-	public static void main(String[] args) {
-		EventQueue.invokeLater(new Runnable() {
-			public void run() {
-				try {
-					MainWindow frame = new MainWindow();
-					frame.setVisible(true);
-					Thread t0 = new Thread() {
-						@Override
-						public void run() {
-							frame.startAnalysis();
-						}
-					};
-					t0.start();
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-		});
-	}
 
 	/**
 	 * Create the frame.
@@ -76,124 +46,51 @@ public class MainWindow extends JFrame {
 		contentPane.setLayout(new BorderLayout(0, 0));
 		setContentPane(contentPane);
 
+		// add a scrollable text field with multiple lines of text for debug output
 		JScrollPane scrollPane = new JScrollPane();
 		contentPane.add(scrollPane, BorderLayout.CENTER);
-
-		// add a text field with multiple lines of text for debug output
 		outputTextField = new JTextArea();
 		outputTextField.setFont(new Font("Consolas", Font.PLAIN, 14));
 		outputTextField.setText("");
 		outputTextField.setEditable(false);
 		scrollPane.setViewportView(outputTextField);
-
 	}
 
 	private void startAnalysis() {
-		// get the roots of the file system structure of your OS
-		addOutput("INFO: Analyzing file system structure ...");
-		File[] rootFileSystems = File.listRoots();
-		if (rootFileSystems.length <= 0) {
-			addOutput("ERROR: No file systems found!");
-			return;
-		}
-		addOutput("INFO: Found " + Arrays.toString(rootFileSystems));
-
-		// adjust minecraft file path to operating system and found drives
-		File tmpLogFolder = null;
-		String homePath = System.getProperty("user.home");
-		ArrayList<File> minecraftFolders = new ArrayList<File>();
-		switch (OsCheck.getOperatingSystemType()) {
-		case Windows:
-			addOutput("INFO: Windows operating system found");
-			for (File drive : rootFileSystems) {
-				tmpLogFolder = new File(drive + homePath.substring(3) + "\\AppData\\Roaming\\.minecraft");
-				if (tmpLogFolder.exists())
-					minecraftFolders.add(tmpLogFolder);
-			}
-			break;
-		case MacOS:
-			addOutput("INFO: MacOS operating system found");
-			tmpLogFolder = new File(homePath + "/Library/Application Support/minecraft");
-			if (tmpLogFolder.exists())
-				minecraftFolders.add(tmpLogFolder);
-			break;
-		case Linux:
-			addOutput("INFO: Linux operating system found");
-			tmpLogFolder = new File(homePath + "/.minecraft");
-			if (tmpLogFolder.exists())
-				minecraftFolders.add(tmpLogFolder);
-			break;
-		case Other:
-			addOutput("ERROR: Unknown operating system!");
-			break;
-		}
-		if (minecraftFolders.size() <= 0) {
-			addOutput("ERROR: No minecraft folders found!");
-			return;
-		}
-		for (File minecraftFolder : minecraftFolders)
-			addOutput("INFO: Found " + minecraftFolder.getAbsolutePath());
-
-		// get log folders
-		ArrayList<File> minecraftLogFolders = new ArrayList<File>();
-		for (File minecraftFolder : minecraftFolders) {
-			for (File folder : minecraftFolder.listFiles()) {
-				if (folder.isDirectory()) {
-					if (folder.getName().equalsIgnoreCase("logs")) {
-						minecraftLogFolders.add(folder);
-					} else {
-						for (File subFolder : folder.listFiles()) {
-							if (subFolder.getName().equalsIgnoreCase("logs"))
-								minecraftLogFolders.add(subFolder);
-						}
-					}
-				}
-			}
-		}
+		// look for log folders
+		OSFileSystem fileSystem = new OSFileSystem(mainWindow);
+		ArrayList<File> minecraftLogFolders = fileSystem.lookForMinecraftLogFolders();
 		for (File minecraftLogFolder : minecraftLogFolders)
 			addOutput("INFO: Found " + minecraftLogFolder.getAbsolutePath());
 
 		// analyze all found log files
 		addOutput("INFO: Analyzing log files ... (might take a minute)");
-		List<LogLine> results = new ArrayList<>();
-		BufferedReader br = null;
+		TreeMap<String, Integer> playerNames = new TreeMap<String, Integer>();
+		List<MinecraftLogLine> relevantLogLines = new ArrayList<>();
+		final String[] logLineFilters_regex = { "The Catacombs - Floor [VI]*", "Master Mode Catacombs - Floor [VI]*",
+				"Team Score: [0-9]* [\\(][SABCD][+]?[\\)]", "Necron's Handle", "You [a-z]+ Kismet Feather.*",
+				"You collected [0-9,]+ coins from selling Kismet Feather to .*" };
+		MinecraftLogFile minecraftLogFile = null;
 		for (File minecraftLogFolder : minecraftLogFolders) {
 			for (File logFile : minecraftLogFolder.listFiles()) {
 				try {
-					long creationTime = getCreationTime(logFile);
-					InputStream inputStream = new FileInputStream(logFile);
-					if (logFile.getName().endsWith(".gz"))
-						inputStream = new GZIPInputStream(inputStream);
-					br = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"));
-					List<LogLine> tmp = br.lines().filter(a -> {
-						if (a.matches("\\[[0-9:]{8}\\] \\[Client thread/INFO\\]: Setting user: .*")) {
-							String name = a.replaceAll("\\[[0-9:]{8}\\] \\[Client thread/INFO\\]: Setting user: ", "");
-							playerNames.put(name, playerNames.getOrDefault(name, 0) + 1);
-						}
-						return a.contains("[CHAT]");
-					}).map(a -> a.replaceAll("\\[[0-9:]{8}\\] \\[Client thread/INFO\\]: \\[CHAT\\] ", "").trim())
-							.filter(a -> {
-								for (int i = 0; i < logFilterRegex.length; i++) {
-									if (a.matches(logFilterRegex[i])) {
-										return true;
-									}
-								}
-								return false;
-							}).map(a -> new LogLine(creationTime, a)).collect(Collectors.toList());
-					br.close();
-					results.addAll(tmp);
+					minecraftLogFile = new MinecraftLogFile(logFile);
+					relevantLogLines.addAll(minecraftLogFile.filterLines(logLineFilters_regex));
+					String name = minecraftLogFile.getPlayerName();
+					if (name != null)
+						playerNames.put(name, playerNames.getOrDefault(name, 0) + 1);
 				} catch (FileNotFoundException ignored) {
 				} catch (IOException ignored) {
 				}
 			}
 		}
 
-		// count floor 7 runs with S+ score and count hadle's and chestplate's
+		// count floor 7 runs with S+ score and count Hadle's and Kismet feathers
 		DungeonRunLog runs = new DungeonRunLog(); // Floor 7 S+ runs
 		DungeonRunLog necronHandles = new DungeonRunLog(); // Necron's Handles dropped
 		DungeonRunLog kismetFeathers = new DungeonRunLog(); // Kismet Feathers added / removed
 		boolean isFloorSeven = false;
-		for (LogLine line : results) {
+		for (MinecraftLogLine line : relevantLogLines) {
 			if (isFloorSeven && line.getText().matches("Team Score: [0-9]* [\\(]S\\+[\\)]"))
 				runs.add(line.getCreationTime(), 1);
 			if (line.getText().matches("You .* Kismet Feather.*")) {
@@ -236,15 +133,29 @@ public class MainWindow extends JFrame {
 		} else {
 			addOutput("ERROR: Data could not be submitted");
 		}
-
 	}
 
-	private long getCreationTime(File file) {
-		try {
-			return Files.readAttributes(file.toPath(), BasicFileAttributes.class).creationTime().toMillis();
-		} catch (IOException ignored) {
-		}
-		return 0;
+	/**
+	 * Launch the application.
+	 */
+	public static void main(String[] args) {
+		EventQueue.invokeLater(new Runnable() {
+			public void run() {
+				try {
+					mainWindow = new MainWindow();
+					mainWindow.setVisible(true);
+					Thread t0 = new Thread() {
+						@Override
+						public void run() {
+							mainWindow.startAnalysis();
+						}
+					};
+					t0.start();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		});
 	}
 
 	/**
@@ -252,7 +163,7 @@ public class MainWindow extends JFrame {
 	 * 
 	 * @param s - text to add
 	 */
-	private void addOutput(String s) {
+	public void addOutput(String s) {
 		String oldText = outputTextField.getText();
 		outputTextField.setText(oldText + s + "\n");
 	}

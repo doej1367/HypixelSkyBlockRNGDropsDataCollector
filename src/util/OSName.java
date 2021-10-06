@@ -1,4 +1,4 @@
-package main;
+package util;
 
 /**
  * helper class to check the operating system this Java VM runs in
@@ -12,7 +12,7 @@ package main;
  */
 import java.util.Locale;
 
-public final class OsCheck {
+public final class OSName {
 	/**
 	 * types of Operating Systems
 	 */
