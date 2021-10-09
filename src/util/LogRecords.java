@@ -12,8 +12,14 @@ public class LogRecords extends TreeMap<String, TimeslotMap> {
 	private String allLines;
 	private final String[] dungeonMainLines = { "The Catacombs - Floor [VI]+", "Master Mode Catacombs - Floor [VI]+" };
 	private final String dungeonScoreLine = "Team Score: [0-9]+ [\\(][SABCD][+]?[\\)].*";
-	// TODO add loot items
-	private final String[] dungeonLootLines = { "Necron's Handle", "Wither Chestplate" };
+	private final String[] dungeonLootLines = { "Necron's Handle", "Wither Chestplate",
+			"RARE REWARD! Recombobulator 3000", "Enchanted Book \\(One For All I\\)", "Auto Recombobulator",
+			"Implosion", "Wither Shield", "Shadow Warp", "Wither Catalyst", "Enchanted Book \\(Soul Eater I\\)",
+			"Precursor Gear", "Necromancer Lord Chestplate", "Precursor Eye", "Giant's Sword", "Summoning Ring",
+			"Shadow Assassin Chestplate", "Livid Dagger", "RARE REWARD! Fuming Potato Book", "Spirit Bow",
+			"Spirit Wing", "Spirit Boots", "Spirit Bone", "Scarf's Studies", "Bonzo's Staff", "Bonzo's Mask",
+			"Adaptive Blade", "Adaptive Chestplate", "Spirit Pet", "Enchanted Book \\(Rend [I]+\\)", "Dark Orb",
+			"Enchanted Book \\(Overload I\\)" };
 
 	private final String[] slayerLines = { ".5... .7Slay ..[0-9,]+ Combat XP .7worth of [A-Z][a-z]+.7.",
 			"[A-Z][a-z]+ Slayer LVL [0-9]+ - Next LVL in [0-9,]+ XP!" };
@@ -90,14 +96,15 @@ public class LogRecords extends TreeMap<String, TimeslotMap> {
 			if (line.getText().matches(dungeonScoreLine)) {
 				score = line.getText().replaceAll("Team Score: [0-9]* [\\(]", "").replaceAll("[\\)].*", "");
 				if (score.matches("[BCD]"))
-					score = "BCD"; // TODO keep this?
+					score = "BCD";
 			} else
 				return --lineIndex;
 			get("d." + mode + floor + "." + score).add(logLines.get(lineIndex).getCreationTime(), 1);
 			lineIndex = (lineIndex < logLines.size() - 1) ? (lineIndex + 1) : lineIndex;
 			line = logLines.get(lineIndex);
 			while (line.matches(dungeonLootLines) && lineIndex < logLines.size() - 1) {
-				get("d." + mode + floor + "." + score + "." + line.getText()).add(line.getCreationTime(), 1);
+				get("d." + mode + floor + "." + score + "." + line.getText().replaceAll("RARE REWARD! ", "")
+						.replaceAll("Enchanted Book \\(", "").replaceAll("\\)", "")).add(line.getCreationTime(), 1);
 				lineIndex++;
 				line = logLines.get(lineIndex);
 			}

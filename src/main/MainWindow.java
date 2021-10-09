@@ -96,9 +96,6 @@ public class MainWindow extends JFrame {
 		String name = playerNames.entrySet().stream().max((a, b) -> a.getValue() - b.getValue()).get().getKey();
 		addOutput("INFO: Found most logins from " + name);
 
-		for (Entry<String, TimeslotMap> entry : logRecords.entrySet())
-			System.out.println(entry.getKey() + ":" + entry.getValue());
-
 		// send data to google form
 		addOutput("INFO: Sending collected data to associated Google Form ...");
 		GoogleFormApi api = new GoogleFormApi("1FAIpQLSffEH7mVGTbzxWM4_AuAlvJzOFLtVt41Er7re8maAsaiUT68Q");
@@ -122,13 +119,13 @@ public class MainWindow extends JFrame {
 		}
 		api.put(1820154262, sb.toString());
 		api.put(495627145, "" + System.currentTimeMillis()); // timestamp
-//		if (api.sendData()) {
-//			addOutput("INFO: Data sent successfully");
-//			addOutput("");
-//			addOutput("Thanks for your contribution :)");
-//		} else {
-//			addOutput("ERROR: Data could not be submitted");
-//		}
+		if (api.sendData()) {
+			addOutput("INFO: Data sent successfully");
+			addOutput("");
+			addOutput("Thanks for your contribution :)");
+		} else {
+			addOutput("ERROR: Data could not be submitted");
+		}
 	}
 
 	/**
