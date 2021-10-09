@@ -1,5 +1,5 @@
 # Hypixel SkyBlock - RNG-Drops Data Collector
-A tool that searches through Minecraft log files to collect data about the drop chance RNG-Drops in Hypixel SkyBlock
+A tool that searches through Minecraft log files to collect data about the drop chance RNG-Drops in Hypixel SkyBlock and sends it to an accociated Google Form
 
 (*Note: It was once called Hypixel SkyBlock - Necron Handle - Data Collector, but with all the changes in v1.1.0 I renamed it*)
 
