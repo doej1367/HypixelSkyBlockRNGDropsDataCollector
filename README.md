@@ -5,7 +5,8 @@ A tool that searches through Minecraft log files to collect data about the drop 
 
 # Client-Side: Java Tool
 ## Where can I download it?
-- It's the first .jar-file in [Realeases](https://github.com/doej1367/HypixelSkyBlockRNGDropsDataCollector/releases)
+- [Download](https://github.com/doej1367/HypixelSkyBlockRNGDropsDataCollector/releases/download/v1.1.0/RNGDropsDataCollector.jar) (latest release)
+    - It's the first .jar-file in [Realeases](https://github.com/doej1367/HypixelSkyBlockRNGDropsDataCollector/releases)
 ## What exactly does this app do?
 1. Start the app. ([MainWindow.java#L134-L152](https://github.com/doej1367/HypixelSkyBlockRNGDropsDataCollector/blob/db3a82ce4fba00f011309f44838078bb39a3708d/src/main/MainWindow.java#L134-L152))
 2. Show a small window to keep you up to date on what the app is doing. ([MainWindow.java#L42-L61](https://github.com/doej1367/HypixelSkyBlockRNGDropsDataCollector/blob/db3a82ce4fba00f011309f44838078bb39a3708d/src/main/MainWindow.java#L42-L61))
