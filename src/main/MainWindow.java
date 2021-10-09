@@ -100,12 +100,12 @@ public class MainWindow extends JFrame {
 		addOutput("INFO: Sending collected data to associated Google Form ...");
 		GoogleFormApi api = new GoogleFormApi("1FAIpQLSffEH7mVGTbzxWM4_AuAlvJzOFLtVt41Er7re8maAsaiUT68Q");
 		api.put(651714876, name); // name id
-		api.put(94270834, logRecords.get("d.f7.S+").toString()); // runs
-		logRecords.remove("d.f7.S+");
-		api.put(969988648, logRecords.get("d.f7.S+.Necron's Handle").toString()); // drops
-		logRecords.remove("d.f7.S+.Necron's Handle");
-		api.put(1950438969, logRecords.get("i.Kismet Feather").toString()); // feathers
-		logRecords.remove("i.Kismet Feather");
+		api.put(94270834, logRecords.get("extra.d.f7.S+").toString()); // runs
+		logRecords.remove("extra.d.f7.S+");
+		api.put(969988648, logRecords.get("extra.d.f7.S+.Necron's Handle").toString()); // drops
+		logRecords.remove("extra.d.f7.S+.Necron's Handle");
+		api.put(1950438969, logRecords.get("extra.i.Kismet Feather").toString()); // feathers
+		logRecords.remove("extra.i.Kismet Feather");
 		StringBuilder sb = new StringBuilder();
 		boolean firstLine = true;
 		for (Entry<String, TimeslotMap> entry : logRecords.entrySet()) {

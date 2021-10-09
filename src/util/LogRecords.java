@@ -37,9 +37,9 @@ public class LogRecords extends TreeMap<String, TimeslotMap> {
 
 	public LogRecords() {
 		// prepare TimeslotMap with 7 day slot duration
-		put("d.f7.S+", new TimeslotMap(7, 2));
-		put("d.f7.S+.Necron's Handle", new TimeslotMap(7, 2));
-		put("i.Kismet Feather", new TimeslotMap(7, 2));
+		put("extra.d.f7.S+", new TimeslotMap(7, 2));
+		put("extra.d.f7.S+.Necron's Handle", new TimeslotMap(7, 2));
+		put("extra.i.Kismet Feather", new TimeslotMap(7, 2));
 		// prepare slayerLootLines
 		ArrayList<String> slayerLootLines_tmp = new ArrayList<>();
 		for (String item : slayerItems)
@@ -99,12 +99,17 @@ public class LogRecords extends TreeMap<String, TimeslotMap> {
 					score = "BCD";
 			} else
 				return --lineIndex;
+			if (mode == 'f' && floor == 7 && score.contains("S+"))
+				get("extra.d." + mode + floor + "." + score).add(logLines.get(lineIndex).getCreationTime(), 1);
 			get("d." + mode + floor + "." + score).add(logLines.get(lineIndex).getCreationTime(), 1);
 			lineIndex = (lineIndex < logLines.size() - 1) ? (lineIndex + 1) : lineIndex;
 			line = logLines.get(lineIndex);
 			while (line.matches(dungeonLootLines) && lineIndex < logLines.size() - 1) {
-				get("d." + mode + floor + "." + score + "." + line.getText().replaceAll("RARE REWARD! ", "")
-						.replaceAll("Enchanted Book \\(", "").replaceAll("\\)", "")).add(line.getCreationTime(), 1);
+				String itemName = line.getText().replaceAll("RARE REWARD! ", "").replaceAll("Enchanted Book \\(", "")
+						.replaceAll("\\)", "");
+				if (mode == 'f' && floor == 7 && score.contains("S+") && itemName.contains("Necron's Handle"))
+					get("extra.d." + mode + floor + "." + score + "." + itemName).add(line.getCreationTime(), 1);
+				get("d." + mode + floor + "." + score + "." + itemName).add(line.getCreationTime(), 1);
 				lineIndex++;
 				line = logLines.get(lineIndex);
 			}
@@ -135,17 +140,21 @@ public class LogRecords extends TreeMap<String, TimeslotMap> {
 					}
 				}
 				if (text.contains("bought") || text.contains("claimed"))
-					get("i." + itemName).add(line.getCreationTime(), itemCount);
+					;
 				else if (text.contains("sold") || text.contains("collected"))
-					get("i." + itemName).add(line.getCreationTime(), -itemCount);
+					itemCount = -itemCount;
+				if (itemName.contains("Kismet Feather"))
+					get("extra.i." + itemName).add(line.getCreationTime(), itemCount);
+				get("i." + itemName).add(line.getCreationTime(), itemCount);
 			}
 		} else if (line.matches(slayerLines)) {
 			if (line.getText().matches(slayerLines[0])) {
 				startedSlayer = line.getText();
 			} else {
 				String type = line.getText().split(" ")[0].substring(0, 1).toLowerCase();
-				String xpToSpawn = startedSlayer.substring(15).split(" ")[0].replaceAll(",", "");
-				get("s." + type + "." + xpToSpawn).add(logLines.get(lineIndex).getCreationTime(), 1);
+				int xpToSpawn = Integer.parseInt(startedSlayer.substring(15).split(" ")[0].replaceAll(",", ""));
+				String formatedXpToSpawn = String.format("%05d", xpToSpawn);
+				get("s." + type + "." + formatedXpToSpawn).add(logLines.get(lineIndex).getCreationTime(), 1);
 				lineIndex = (lineIndex < logLines.size() - 1) ? (lineIndex + 1) : lineIndex;
 				line = logLines.get(lineIndex);
 				if (line.getText().matches(slayerLines[0]))
@@ -159,7 +168,7 @@ public class LogRecords extends TreeMap<String, TimeslotMap> {
 							name = item;
 							break;
 						}
-					get("s." + type + "." + xpToSpawn + "." + name).add(line.getCreationTime(), 1);
+					get("s." + type + "." + formatedXpToSpawn + "." + name).add(line.getCreationTime(), 1);
 					lineIndex++;
 					line = logLines.get(lineIndex);
 				}
