@@ -41,7 +41,7 @@ public class MainWindow extends JFrame {
 	 */
 	public MainWindow() {
 		// create window
-		setTitle("Hypixel SkyBlock Necron Handle Data Collector");
+		setTitle("Hypixel SkyBlock RNG-Drops Data Collector");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 800, 540);
 		setLocationRelativeTo(null);
