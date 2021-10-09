@@ -23,7 +23,8 @@ public class GoogleFormApi {
 		postData.append("entry.");
 		postData.append(id);
 		postData.append("=");
-		postData.append(value.replaceAll(",", "%2C"));
+		String data = value.replaceAll(",", "%2C").replaceAll("\\+", "%2B").replaceAll("'", "%27").replaceAll(" ", "+");
+		postData.append(data);
 	}
 
 	public boolean sendData() {

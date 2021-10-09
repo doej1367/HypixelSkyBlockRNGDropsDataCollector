@@ -6,16 +6,19 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.TreeMap;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
-import util.DungeonRunLog;
+import util.TimeslotMap;
 import util.GoogleFormApi;
-import util.MinecraftLogLine;
-import util.MinecraftLogFile;
+import util.LogRecords;
+import util.MCLogLine;
+import util.MCLogFile;
 import util.OSFileSystem;
 import javax.swing.JTextArea;
 import java.awt.Font;
@@ -31,6 +34,7 @@ public class MainWindow extends JFrame {
 
 	private JPanel contentPane;
 	private JTextArea outputTextField;
+	private LogRecords logRecords = new LogRecords();
 
 	/**
 	 * Create the frame.
@@ -60,21 +64,18 @@ public class MainWindow extends JFrame {
 		// look for log folders
 		OSFileSystem fileSystem = new OSFileSystem(mainWindow);
 		ArrayList<File> minecraftLogFolders = fileSystem.lookForMinecraftLogFolders();
-		for (File minecraftLogFolder : minecraftLogFolders)
-			addOutput("INFO: Found " + minecraftLogFolder.getAbsolutePath());
 
 		// analyze all found log files
-		addOutput("INFO: Analyzing log files ... (might take a minute)");
+		addOutput("INFO: Loading log files ... (might take a minute)");
 		TreeMap<String, Integer> playerNames = new TreeMap<String, Integer>();
-		List<MinecraftLogLine> relevantLogLines = new ArrayList<>();
-		final String[] logLineFilters_regex = { "The Catacombs - Floor [VI]*", "Master Mode Catacombs - Floor [VI]*",
-				"Team Score: [0-9]* [\\(][SABCD][+]?[\\)]", "Necron's Handle", "You [a-z]+ Kismet Feather.*",
-				"You collected [0-9,]+ coins from selling Kismet Feather to .*" };
-		MinecraftLogFile minecraftLogFile = null;
+		List<MCLogLine> relevantLogLines = new ArrayList<>();
+		final String logLineFilters_regex = logRecords.getLoglinefilterRegex();
+		MCLogFile minecraftLogFile = null;
 		for (File minecraftLogFolder : minecraftLogFolders) {
+			addOutput("INFO: Loading files from " + minecraftLogFolder.getAbsolutePath());
 			for (File logFile : minecraftLogFolder.listFiles()) {
 				try {
-					minecraftLogFile = new MinecraftLogFile(logFile);
+					minecraftLogFile = new MCLogFile(logFile);
 					relevantLogLines.addAll(minecraftLogFile.filterLines(logLineFilters_regex));
 					String name = minecraftLogFile.getPlayerName();
 					if (name != null)
@@ -84,55 +85,50 @@ public class MainWindow extends JFrame {
 				}
 			}
 		}
+		Collections.sort(relevantLogLines);
 
 		// count floor 7 runs with S+ score and count Hadle's and Kismet feathers
-		DungeonRunLog runs = new DungeonRunLog(); // Floor 7 S+ runs
-		DungeonRunLog necronHandles = new DungeonRunLog(); // Necron's Handles dropped
-		DungeonRunLog kismetFeathers = new DungeonRunLog(); // Kismet Feathers added / removed
-		boolean isFloorSeven = false;
-		for (MinecraftLogLine line : relevantLogLines) {
-			if (isFloorSeven && line.getText().matches("Team Score: [0-9]* [\\(]S\\+[\\)]"))
-				runs.add(line.getCreationTime(), 1);
-			if (line.getText().matches("You .* Kismet Feather.*")) {
-				switch (line.getText().substring(4).split(" ")[0]) {
-				case "bought":
-				case "claimed":
-					kismetFeathers.add(line.getCreationTime(), 1);
-					break;
-				case "sold":
-				case "collected":
-					kismetFeathers.add(line.getCreationTime(), -1);
-					break;
-				}
-			}
-			if (line.getText().matches("Necron's Handle"))
-				necronHandles.add(line.getCreationTime(), 1);
-			isFloorSeven = line.getText().matches("The Catacombs - Floor VII");
-		}
+		addOutput("INFO: Analyzing log lines ...");
+
+		for (int i = 0; i < relevantLogLines.size(); i++)
+			i = logRecords.add(i, relevantLogLines);
+
 		String name = playerNames.entrySet().stream().max((a, b) -> a.getValue() - b.getValue()).get().getKey();
 		addOutput("INFO: Found most logins from " + name);
-		addOutput("INFO: Found " + runs.getSum() + " normal Floor VII S+ runs");
-		addOutput("INFO: Runs/week " + runs.values());
-		addOutput("INFO: Found " + necronHandles.getSum() + " Necron's Handle Drop(s)");
-		addOutput("INFO: Drops/week " + necronHandles.values());
-		addOutput("INFO: Found " + kismetFeathers.getSum() + " Kismet Feathers in inventory");
-		addOutput("INFO: Bought/week " + kismetFeathers.values());
+
+		for (Entry<String, TimeslotMap> entry : logRecords.entrySet())
+			System.out.println(entry.getKey() + ":" + entry.getValue());
 
 		// send data to google form
 		addOutput("INFO: Sending collected data to associated Google Form ...");
 		GoogleFormApi api = new GoogleFormApi("1FAIpQLSffEH7mVGTbzxWM4_AuAlvJzOFLtVt41Er7re8maAsaiUT68Q");
 		api.put(651714876, name); // name id
-		api.put(94270834, runs.toString()); // runs
-		api.put(969988648, necronHandles.toString()); // drops
-		api.put(1950438969, kismetFeathers.toString()); // feathers
-		api.put(495627145, "" + System.currentTimeMillis()); // timestamp
-		if (api.sendData()) {
-			addOutput("INFO: Data sent successfully");
-			addOutput("");
-			addOutput("Thanks for your contribution :)");
-		} else {
-			addOutput("ERROR: Data could not be submitted");
+		api.put(94270834, logRecords.get("d.f7.S+").toString()); // runs
+		logRecords.remove("d.f7.S+");
+		api.put(969988648, logRecords.get("d.f7.S+.Necron's Handle").toString()); // drops
+		logRecords.remove("d.f7.S+.Necron's Handle");
+		api.put(1950438969, logRecords.get("i.Kismet Feather").toString()); // feathers
+		logRecords.remove("i.Kismet Feather");
+		StringBuilder sb = new StringBuilder();
+		boolean firstLine = true;
+		for (Entry<String, TimeslotMap> entry : logRecords.entrySet()) {
+			if (firstLine)
+				firstLine = false;
+			else
+				sb.append(";");
+			sb.append(entry.getKey());
+			sb.append(":");
+			sb.append(entry.getValue().toString());
 		}
+		api.put(1820154262, sb.toString());
+		api.put(495627145, "" + System.currentTimeMillis()); // timestamp
+//		if (api.sendData()) {
+//			addOutput("INFO: Data sent successfully");
+//			addOutput("");
+//			addOutput("Thanks for your contribution :)");
+//		} else {
+//			addOutput("ERROR: Data could not be submitted");
+//		}
 	}
 
 	/**

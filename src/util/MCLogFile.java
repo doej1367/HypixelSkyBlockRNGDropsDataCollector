@@ -14,12 +14,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 
-public class MinecraftLogFile {
+public class MCLogFile {
 	private long creationTime;
 	private String playerName;
 	private Stream<String> linesStream;
 
-	public MinecraftLogFile(File logFile) throws FileNotFoundException, IOException {
+	public MCLogFile(File logFile) throws FileNotFoundException, IOException {
 		creationTime = getCreationTime(logFile);
 		InputStream inputStream = new FileInputStream(logFile);
 		if (logFile.getName().endsWith(".gz"))
@@ -34,15 +34,11 @@ public class MinecraftLogFile {
 		});
 	}
 
-	public List<MinecraftLogLine> filterLines(String[] logLineFilters_regex) {
-		List<MinecraftLogLine> filteredlogLines = linesStream
+	public List<MCLogLine> filterLines(String logLineFilterRegex) {
+		List<MCLogLine> filteredlogLines = linesStream
 				.map(a -> a.replaceAll("\\[[0-9:]{8}\\] \\[Client thread/INFO\\]: \\[CHAT\\] ", "").trim())
-				.filter(a -> {
-					for (int i = 0; i < logLineFilters_regex.length; i++)
-						if (a.matches(logLineFilters_regex[i]))
-							return true;
-					return false;
-				}).map(a -> new MinecraftLogLine(creationTime, a)).collect(Collectors.toList());
+				.filter(a -> a.matches(logLineFilterRegex)).map(a -> new MCLogLine(creationTime, a))
+				.collect(Collectors.toList());
 		linesStream.close();
 		return filteredlogLines;
 	}
