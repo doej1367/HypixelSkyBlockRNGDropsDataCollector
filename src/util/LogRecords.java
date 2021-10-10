@@ -23,7 +23,7 @@ public class LogRecords extends TreeMap<String, TimeslotMap> {
 
 	private final String[] slayerLines = { ".5... .7Slay ..[0-9,]+ Combat XP .7worth of [A-Z][a-z]+.7.",
 			"[A-Z][a-z]+ Slayer LVL [0-9]+ - Next LVL in [0-9,]+ XP!" };
-	private String startedSlayer = "";
+	private String startedSlayer = null;
 	private String[] slayerLootLines = { "[A-Z ]+ DROP![ ]{1,2}[\\(]?item[\\)]?( [\\(].+[\\)])?" };
 	private final String[] slayerItems = { "Beheaded Horror", "Scythe Blade", "Shard of the Shredded", "Warden Heart",
 			"Fly Swatter", "Tarantula Talisman", "Digested Mosquito", "Red Claw Egg", "Couture Rune I",
@@ -150,7 +150,7 @@ public class LogRecords extends TreeMap<String, TimeslotMap> {
 		} else if (line.matches(slayerLines)) {
 			if (line.getText().matches(slayerLines[0])) {
 				startedSlayer = line.getText();
-			} else {
+			} else if (startedSlayer != null) {
 				String type = line.getText().split(" ")[0].substring(0, 1).toLowerCase();
 				int xpToSpawn = Integer.parseInt(startedSlayer.substring(15).split(" ")[0].replaceAll(",", ""));
 				String formatedXpToSpawn = String.format("%05d", xpToSpawn);
