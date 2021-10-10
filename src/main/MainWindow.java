@@ -31,6 +31,7 @@ import javax.swing.Box;
 import java.awt.Color;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import javax.swing.BoxLayout;
 
 /**
  * 
@@ -46,12 +47,12 @@ public class MainWindow extends JFrame {
 	private Button defaultButton;
 	private Button addFoldersButton;
 	private JPanel panel;
-	private Component horizontalStrut_1;
 	private Component horizontalGlue;
 	private Component horizontalGlue_1;
 
 	private TreeSet<String> additionalFolderPaths = new TreeSet<>();
 	private LogRecords logRecords = new LogRecords();
+	private Component horizontalGlue_2;
 
 	/**
 	 * Create the frame.
@@ -62,6 +63,7 @@ public class MainWindow extends JFrame {
 		setTitle("Hypixel SkyBlock RNG-Drops Data Collector");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 800, 540);
+		setMinimumSize(getSize());
 		setLocationRelativeTo(null);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
@@ -71,6 +73,7 @@ public class MainWindow extends JFrame {
 		// add buttons
 		panel = new JPanel();
 		contentPane.add(panel, BorderLayout.NORTH);
+		panel.setLayout(new BoxLayout(panel, BoxLayout.X_AXIS));
 
 		horizontalGlue = Box.createHorizontalGlue();
 		panel.add(horizontalGlue);
@@ -85,9 +88,9 @@ public class MainWindow extends JFrame {
 		panel.add(defaultButton);
 		defaultButton.setForeground(Color.BLUE);
 		defaultButton.setFont(new Font("Consolas", Font.PLAIN, 14));
-
-		horizontalStrut_1 = Box.createHorizontalStrut(30);
-		panel.add(horizontalStrut_1);
+		
+		horizontalGlue_2 = Box.createHorizontalGlue();
+		panel.add(horizontalGlue_2);
 
 		addFoldersButton = new Button("Add custom .minecraft folder locations");
 		addFoldersButton.addActionListener(new ActionListener() {

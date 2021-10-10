@@ -15,6 +15,7 @@ import java.awt.event.ActionEvent;
 import javax.swing.JScrollPane;
 import java.awt.Component;
 import javax.swing.Box;
+import javax.swing.BoxLayout;
 
 public class FolderWindow extends JFrame {
 	private static final long serialVersionUID = 1L;
@@ -31,18 +32,20 @@ public class FolderWindow extends JFrame {
 		// window to add folder locations
 		setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
 		setBounds(100, 100, 595, 400);
+		setMinimumSize(getSize());
 		setLocationRelativeTo(null);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
-		contentPane.setLayout(new BorderLayout(0, 0));
+		contentPane.setLayout(new BorderLayout(0, 5));
 
 		// buttons and a text field to select, edit and add folders
 		JPanel panel = new JPanel();
 		contentPane.add(panel, BorderLayout.NORTH);
+		panel.setLayout(new BoxLayout(panel, BoxLayout.X_AXIS));
 		folderPathInput = new TextField();
 		folderPathInput.setFont(new Font("Consolas", Font.PLAIN, 14));
-		folderPathInput.setColumns(45);
+		folderPathInput.setColumns(30);
 		panel.add(folderPathInput);
 
 		JFrame folderSelector = this;
