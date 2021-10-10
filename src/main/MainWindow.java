@@ -49,10 +49,11 @@ public class MainWindow extends JFrame {
 	private JPanel panel;
 	private Component horizontalGlue;
 	private Component horizontalGlue_1;
+	private Component horizontalGlue_2;
 
 	private TreeSet<String> additionalFolderPaths = new TreeSet<>();
 	private LogRecords logRecords = new LogRecords();
-	private Component horizontalGlue_2;
+	private int tmpOutputlength = 0;
 
 	/**
 	 * Create the frame.
@@ -132,14 +133,24 @@ public class MainWindow extends JFrame {
 			ArrayList<File> minecraftLogFolders = fileSystem.lookForMinecraftLogFolders();
 
 			// analyze all found log files
+
 			addOutput("INFO: Loading log files ... (might take a minute)");
 			TreeMap<String, Integer> playerNames = new TreeMap<String, Integer>();
 			List<MCLogLine> relevantLogLines = new ArrayList<>();
 			final String logLineFilters_regex = logRecords.getLoglinefilterRegex();
+			int counter = 0;
+			int fileCount = 1;
+			File[] files = null;
 			MCLogFile minecraftLogFile = null;
 			for (File minecraftLogFolder : minecraftLogFolders) {
-				addOutput("INFO: Loading files from " + minecraftLogFolder.getAbsolutePath());
-				for (File logFile : minecraftLogFolder.listFiles()) {
+				files = minecraftLogFolder.listFiles();
+				fileCount = files.length;
+				addOutput("INFO: Loading log files from " + minecraftLogFolder.getAbsolutePath());
+				counter = 0;
+				for (File logFile : files) {
+					if (counter++ % 20 == 0)
+						addOutputTemporaryly(
+								"INFO: Loading " + fileCount + " files - " + (counter * 100 / fileCount) + "%");
 					try {
 						minecraftLogFile = new MCLogFile(logFile);
 						relevantLogLines.addAll(minecraftLogFile.filterLines(logLineFilters_regex));
@@ -241,7 +252,14 @@ public class MainWindow extends JFrame {
 	 */
 	public void addOutput(String s) {
 		String oldText = outputTextField.getText();
-		outputTextField.setText(oldText + s + "\n");
+		outputTextField.setText(oldText.substring(0, oldText.length() - tmpOutputlength) + s + "\n");
+		tmpOutputlength = 0;
+	}
+
+	public void addOutputTemporaryly(String s) {
+		String oldText = outputTextField.getText();
+		outputTextField.setText(oldText.substring(0, oldText.length() - tmpOutputlength) + s);
+		tmpOutputlength = s.length();
 	}
 
 	public TreeSet<String> getAdditionalFolderPaths() {
