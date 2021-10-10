@@ -52,7 +52,6 @@ public class FolderWindow extends JFrame {
 		Button folderSelectButton = new Button("Select Folder");
 		folderSelectButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				// TODO
 				JFileChooser fileChooser = new JFileChooser();
 				fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 				if (fileChooser.showOpenDialog(folderSelector) == JFileChooser.APPROVE_OPTION) {

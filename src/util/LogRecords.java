@@ -169,6 +169,12 @@ public class LogRecords extends TreeMap<String, TimeslotMap> {
 							break;
 						}
 					get("s." + type + "." + formatedXpToSpawn + "." + name).add(line.getCreationTime(), 1);
+					int mf = 0;
+					String magicFindText = line.getText().split(name + "[ \\(\\+\\)]+")[1];
+					if (magicFindText.contains("% Magic Find!)"))
+						mf = Integer.parseInt(magicFindText.split("%")[0]);
+					get("s." + type + "." + formatedXpToSpawn + "." + name + ".wmf").add(line.getCreationTime(),
+							10000 / (100 + mf));
 					lineIndex++;
 					line = logLines.get(lineIndex);
 				}
