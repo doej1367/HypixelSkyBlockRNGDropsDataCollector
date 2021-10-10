@@ -24,41 +24,35 @@ public class OSFileSystem {
 		mainWindow.addOutput("INFO: Found " + Arrays.toString(rootFileSystems));
 
 		// adjust Minecraft file path to operating system and found drives
-		ArrayList<File> minecraftFolders = new ArrayList<>();
 		String homePath = System.getProperty("user.home");
 		File currentMinecraftFolder = null;
 		switch (OSName.getOperatingSystemType()) {
 		case Windows:
 			mainWindow.addOutput("INFO: Found Windows operating system");
-			for (File drive : rootFileSystems) {
-				currentMinecraftFolder = new File(drive + homePath.substring(3) + "\\AppData\\Roaming\\.minecraft");
-				if (currentMinecraftFolder.exists())
-					minecraftFolders.add(currentMinecraftFolder);
-			}
+			for (File drive : rootFileSystems)
+				mainWindow.getAdditionalFolderPaths()
+						.add(drive + homePath.substring(3) + "\\AppData\\Roaming\\.minecraft");
 			break;
 		case MacOS:
 			mainWindow.addOutput("INFO: Found MacOS operating system");
-			currentMinecraftFolder = new File(homePath + "/Library/Application Support/minecraft");
-			if (currentMinecraftFolder.exists())
-				minecraftFolders.add(currentMinecraftFolder);
+			mainWindow.getAdditionalFolderPaths().add(homePath + "/Library/Application Support/minecraft");
 			break;
 		case Linux:
 			mainWindow.addOutput("INFO: Found Linux operating system");
-			currentMinecraftFolder = new File(homePath + "/.minecraft");
-			if (currentMinecraftFolder.exists())
-				minecraftFolders.add(currentMinecraftFolder);
+			mainWindow.getAdditionalFolderPaths().add(homePath + "/.minecraft");
 			break;
 		case Other:
 			mainWindow.addOutput("ERROR: Unknown operating system!");
 			break;
 		}
-		if (minecraftFolders.size() <= 0) {
-			mainWindow.addOutput("ERROR: No minecraft folders found!");
-		}
+		ArrayList<File> minecraftFolders = new ArrayList<>();
 		for (String path : mainWindow.getAdditionalFolderPaths()) {
 			currentMinecraftFolder = new File(path);
 			if (currentMinecraftFolder.exists())
 				minecraftFolders.add(currentMinecraftFolder);
+		}
+		if (minecraftFolders.size() <= 0) {
+			mainWindow.addOutput("ERROR: No minecraft folders found!");
 		}
 		for (File minecraftFolder : minecraftFolders)
 			mainWindow.addOutput("INFO: Found " + minecraftFolder.getAbsolutePath());
