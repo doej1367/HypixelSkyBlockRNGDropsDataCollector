@@ -1,6 +1,7 @@
 package main;
 
 import java.awt.BorderLayout;
+import java.awt.Button;
 import java.awt.EventQueue;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -10,6 +11,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
+import java.util.TreeSet;
+
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
@@ -23,6 +26,11 @@ import util.OSFileSystem;
 import javax.swing.JTextArea;
 import java.awt.Font;
 import javax.swing.JScrollPane;
+import java.awt.Component;
+import javax.swing.Box;
+import java.awt.Color;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
 
 /**
  * 
@@ -31,15 +39,25 @@ import javax.swing.JScrollPane;
 public class MainWindow extends JFrame {
 	private static final long serialVersionUID = 1L;
 	private static MainWindow mainWindow;
+	private FolderWindow folderWindow;
 
 	private JPanel contentPane;
 	private JTextArea outputTextField;
+	private Button defaultButton;
+	private Button addFoldersButton;
+	private JPanel panel;
+	private Component horizontalStrut_1;
+	private Component horizontalGlue;
+	private Component horizontalGlue_1;
+
+	private TreeSet<String> additionalFolderPaths = new TreeSet<>();
 	private LogRecords logRecords = new LogRecords();
 
 	/**
 	 * Create the frame.
 	 */
 	public MainWindow() {
+		setFont(new Font("Consolas", Font.PLAIN, 14));
 		// create window
 		setTitle("Hypixel SkyBlock RNG-Drops Data Collector");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -47,8 +65,52 @@ public class MainWindow extends JFrame {
 		setLocationRelativeTo(null);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
-		contentPane.setLayout(new BorderLayout(0, 0));
+		contentPane.setLayout(new BorderLayout(0, 5));
 		setContentPane(contentPane);
+
+		// add buttons
+		panel = new JPanel();
+		contentPane.add(panel, BorderLayout.NORTH);
+
+		horizontalGlue = Box.createHorizontalGlue();
+		panel.add(horizontalGlue);
+
+		defaultButton = new Button("Start analyzing currently known .minecraft folders");
+		defaultButton.setBackground(new Color(240, 248, 255));
+		defaultButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				startAnalysis();
+			}
+		});
+		panel.add(defaultButton);
+		defaultButton.setForeground(Color.BLUE);
+		defaultButton.setFont(new Font("Consolas", Font.PLAIN, 14));
+
+		horizontalStrut_1 = Box.createHorizontalStrut(30);
+		panel.add(horizontalStrut_1);
+
+		addFoldersButton = new Button("Add custom .minecraft folder locations");
+		addFoldersButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				EventQueue.invokeLater(new Runnable() {
+					public void run() {
+						try {
+							if (folderWindow == null)
+								folderWindow = new FolderWindow(mainWindow);
+							folderWindow.setVisible(true);
+						} catch (Exception ignored) {
+						}
+					}
+				});
+			}
+		});
+		addFoldersButton.setBackground(new Color(255, 240, 245));
+		panel.add(addFoldersButton);
+		addFoldersButton.setForeground(new Color(153, 0, 102));
+		addFoldersButton.setFont(new Font("Consolas", Font.PLAIN, 14));
+
+		horizontalGlue_1 = Box.createHorizontalGlue();
+		panel.add(horizontalGlue_1);
 
 		// add a scrollable text field with multiple lines of text for debug output
 		JScrollPane scrollPane = new JScrollPane();
@@ -60,7 +122,7 @@ public class MainWindow extends JFrame {
 		scrollPane.setViewportView(outputTextField);
 	}
 
-	private void startAnalysis() {
+	private synchronized void analyze() {
 		// look for log folders
 		OSFileSystem fileSystem = new OSFileSystem(mainWindow);
 		ArrayList<File> minecraftLogFolders = fileSystem.lookForMinecraftLogFolders();
@@ -126,6 +188,8 @@ public class MainWindow extends JFrame {
 		} else {
 			addOutput("ERROR: Data could not be submitted");
 		}
+		defaultButton.setEnabled(true);
+		addFoldersButton.setEnabled(true);
 	}
 
 	/**
@@ -137,18 +201,23 @@ public class MainWindow extends JFrame {
 				try {
 					mainWindow = new MainWindow();
 					mainWindow.setVisible(true);
-					Thread t0 = new Thread() {
-						@Override
-						public void run() {
-							mainWindow.startAnalysis();
-						}
-					};
-					t0.start();
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
 		});
+	}
+
+	private void startAnalysis() {
+		defaultButton.setEnabled(false);
+		addFoldersButton.setEnabled(false);
+		Thread t0 = new Thread() {
+			@Override
+			public void run() {
+				mainWindow.analyze();
+			}
+		};
+		t0.start();
 	}
 
 	/**
@@ -159,5 +228,9 @@ public class MainWindow extends JFrame {
 	public void addOutput(String s) {
 		String oldText = outputTextField.getText();
 		outputTextField.setText(oldText + s + "\n");
+	}
+
+	public TreeSet<String> getAdditionalFolderPaths() {
+		return additionalFolderPaths;
 	}
 }

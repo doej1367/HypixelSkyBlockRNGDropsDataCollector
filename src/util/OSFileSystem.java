@@ -55,6 +55,11 @@ public class OSFileSystem {
 		if (minecraftFolders.size() <= 0) {
 			mainWindow.addOutput("ERROR: No minecraft folders found!");
 		}
+		for (String path : mainWindow.getAdditionalFolderPaths()) {
+			currentMinecraftFolder = new File(path);
+			if (currentMinecraftFolder.exists())
+				minecraftFolders.add(currentMinecraftFolder);
+		}
 		for (File minecraftFolder : minecraftFolders)
 			mainWindow.addOutput("INFO: Found " + minecraftFolder.getAbsolutePath());
 
