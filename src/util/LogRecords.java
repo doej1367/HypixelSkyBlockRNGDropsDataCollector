@@ -21,10 +21,12 @@ public class LogRecords extends TreeMap<String, TimeslotMap> {
 			"Adaptive Blade", "Adaptive Chestplate", "Spirit Pet", "Enchanted Book \\(Rend [I]+\\)", "Dark Orb",
 			"Enchanted Book \\(Overload I\\)" };
 
+	private String startedSlayer = null;
 	private final String[] slayerLines = { ".5... .7Slay ..[0-9,]+ Combat XP .7worth of [A-Z][a-z]+.7.",
 			"[A-Z][a-z]+ Slayer LVL [0-9]+ - Next LVL in [0-9,]+ XP!" };
-	private String startedSlayer = null;
-	private String[] slayerLootLines = { "[A-Z ]+ DROP![ ]{1,2}[\\(]?item[\\)]?( [\\(].+[\\)])?" };
+	private MCLogLine lastRareDrop = null;
+	private String[] rareDropLines = { "[A-Z ]+ DROP![ ]{1,2}[\\(]?[a-zA-Z ]*[a-zA-Z]+[\\)]?( \\(\\+[0-9]+% Magic Find!\\))?" };
+	private String[] slayerLootLines = { "[A-Z ]+ DROP![ ]{1,2}[\\(]?item[\\)]?( \\(\\+[0-9]+% Magic Find!\\))?" };
 	private final String[] slayerItems = { "Beheaded Horror", "Scythe Blade", "Shard of the Shredded", "Warden Heart",
 			"Fly Swatter", "Tarantula Talisman", "Digested Mosquito", "Red Claw Egg", "Couture Rune I",
 			"Overflux Capacitor", "Grizzly Bait", "Pocket Espresso Machine", "Judgement Core", "Handy Blood Chalice",
@@ -58,6 +60,7 @@ public class LogRecords extends TreeMap<String, TimeslotMap> {
 		allLines_tmp.add(dungeonScoreLine);
 		allLines_tmp.addAll(Arrays.asList(dungeonLootLines));
 		allLines_tmp.addAll(Arrays.asList(slayerLines));
+		allLines_tmp.addAll(Arrays.asList(rareDropLines));
 		allLines_tmp.addAll(Arrays.asList(slayerLootLines));
 		allLines_tmp.addAll(Arrays.asList(inventoryChangeLines));
 		StringBuilder sb = new StringBuilder();
@@ -86,6 +89,8 @@ public class LogRecords extends TreeMap<String, TimeslotMap> {
 	public int add(int recordStartLine, List<MCLogLine> logLines) {
 		int lineIndex = recordStartLine;
 		MCLogLine line = logLines.get(lineIndex);
+		if (line.matches(rareDropLines))
+			lastRareDrop = line;
 		if (line.matches(dungeonMainLines)) {
 			// dungeon run
 			char mode = line.getText().startsWith("M") ? 'm' : 'f';
@@ -148,13 +153,14 @@ public class LogRecords extends TreeMap<String, TimeslotMap> {
 				get("i." + itemName).add(line.getCreationTime(), itemCount);
 			}
 		} else if (line.matches(slayerLines)) {
+			// slayers
 			if (line.getText().matches(slayerLines[0])) {
 				startedSlayer = line.getText();
 			} else if (startedSlayer != null) {
+				MCLogLine finishedSlayerLine = line;
 				String type = line.getText().split(" ")[0].substring(0, 1).toLowerCase();
 				int xpToSpawn = Integer.parseInt(startedSlayer.substring(15).split(" ")[0].replaceAll(",", ""));
 				String formatedXpToSpawn = String.format("%05d", xpToSpawn);
-				get("s." + type + "." + formatedXpToSpawn).add(logLines.get(lineIndex).getCreationTime(), 1);
 				lineIndex = (lineIndex < logLines.size() - 1) ? (lineIndex + 1) : lineIndex;
 				line = logLines.get(lineIndex);
 				if (line.getText().matches(slayerLines[0]))
@@ -162,6 +168,7 @@ public class LogRecords extends TreeMap<String, TimeslotMap> {
 				lineIndex = (lineIndex < logLines.size() - 1) ? (lineIndex + 1) : lineIndex;
 				line = logLines.get(lineIndex);
 				while (line.matches(slayerLootLines) && lineIndex < logLines.size() - 1) {
+					lastRareDrop = line;
 					String name = "";
 					for (String item : slayerItems)
 						if (line.getText().contains(item)) {
@@ -169,19 +176,28 @@ public class LogRecords extends TreeMap<String, TimeslotMap> {
 							break;
 						}
 					get("s." + type + "." + formatedXpToSpawn + "." + name).add(line.getCreationTime(), 1);
-					int mf = 0;
-					String magicFindText = line.getText().split(name + "[ \\(\\+\\)]+")[1];
-					if (magicFindText.contains("% Magic Find!)"))
-						mf = Integer.parseInt(magicFindText.split("%")[0]);
-					get("s." + type + "." + formatedXpToSpawn + "." + name + ".wmf").add(line.getCreationTime(),
-							10000 / (100 + mf));
+					get("s." + type + "." + formatedXpToSpawn + "." + name + ".womf").add(line.getCreationTime(),
+							10000 / (100 + extractMagicFind(line)));
 					lineIndex++;
 					line = logLines.get(lineIndex);
 				}
+				get("s." + type + "." + formatedXpToSpawn).add(finishedSlayerLine.getCreationTime(), 1);
+				get("s." + type + "." + formatedXpToSpawn + ".wmf").add(finishedSlayerLine.getCreationTime(),
+						100 + extractMagicFind(lastRareDrop));
 				return --lineIndex;
 			}
 		}
 		return lineIndex;
+	}
+
+	private int extractMagicFind(MCLogLine line) {
+		if (line == null)
+			return 0;
+		int mf = 0;
+		String[] magicFindText = line.getText().split("\\+");
+		if (magicFindText.length > 1 && magicFindText[1].contains("% Magic Find!)"))
+			mf = Integer.parseInt(magicFindText[1].split("%")[0]);
+		return mf;
 	}
 
 	private int parseRomanNumeral(String romanNumeral) {
