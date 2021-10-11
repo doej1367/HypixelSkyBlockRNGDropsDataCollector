@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 
 public class MCLogFile {
+	private static String tmpPlayerName; // needs to be static. Streams are weird...
 	private long creationTime;
 	private String playerName;
 	private Stream<String> linesStream;
@@ -28,23 +29,11 @@ public class MCLogFile {
 		BufferedReader br = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"));
 		final String userSettingLine = "\\[[0-9:]{8}\\] \\[Client thread/INFO\\]: Setting user: ";
 		linesStream = br.lines().filter(a -> {
-			if (playerName == null && a.matches(userSettingLine + ".*"))
-				playerName = a.replaceAll(userSettingLine, "");
+			if (tmpPlayerName == null && a.matches(userSettingLine + ".*"))
+				tmpPlayerName = a.replaceAll(userSettingLine, "");
 			return a.contains("[CHAT]");
 		});
-	}
-
-	public List<MCLogLine> filterLines(String logLineFilterRegex) {
-		List<MCLogLine> filteredlogLines = linesStream
-				.map(a -> a.replaceAll("\\[[0-9:]{8}\\] \\[Client thread/INFO\\]: \\[CHAT\\] ", "").trim())
-				.filter(a -> a.matches(logLineFilterRegex)).map(a -> new MCLogLine(creationTime, a))
-				.collect(Collectors.toList());
-		linesStream.close();
-		return filteredlogLines;
-	}
-
-	public String getPlayerName() {
-		return playerName;
+		playerName = tmpPlayerName;
 	}
 
 	private long getCreationTime(File file) {
@@ -53,5 +42,18 @@ public class MCLogFile {
 		} catch (IOException ignored) {
 		}
 		return 0;
+	}
+
+	public String getPlayerName() {
+		return playerName;
+	}
+
+	public List<MCLogLine> filterLines(String logLineFilterRegex, String lastPlayerName) {
+		List<MCLogLine> filteredlogLines = linesStream
+				.map(a -> a.replaceAll("\\[[0-9:]{8}\\] \\[Client thread/INFO\\]: \\[CHAT\\] ", "").trim())
+				.filter(a -> a.matches(logLineFilterRegex)).map(a -> new MCLogLine(creationTime, lastPlayerName, a))
+				.collect(Collectors.toList());
+		linesStream.close();
+		return filteredlogLines;
 	}
 }

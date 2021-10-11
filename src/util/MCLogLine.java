@@ -6,15 +6,25 @@ package util;
  */
 public class MCLogLine implements Comparable<MCLogLine> {
 	private long creationTime;
+	private String playerName;
 	private String text;
 
-	public MCLogLine(long creationTime, String text) {
+	public MCLogLine(long creationTime, String playerName, String text) {
 		this.creationTime = creationTime;
+		this.playerName = playerName;
 		this.text = text;
 	}
 
 	public long getCreationTime() {
 		return creationTime;
+	}
+
+	public String getPlayerName() {
+		return playerName;
+	}
+
+	public void setPlayerName(String playerName) {
+		this.playerName = playerName;
 	}
 
 	public String getText() {

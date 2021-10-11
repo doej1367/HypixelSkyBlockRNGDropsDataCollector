@@ -15,7 +15,7 @@ public class OSFileSystem {
 
 	public ArrayList<File> lookForMinecraftLogFolders() {
 		// get roots of file system structure of your OS
-		mainWindow.addOutput("INFO: Analyzing file system structure ...");
+		mainWindow.addOutput("INFO: Analyzing file system structure");
 		File[] rootFileSystems = File.listRoots();
 		if (rootFileSystems.length <= 0) {
 			mainWindow.addOutput("ERROR: No file systems found!");

@@ -6,8 +6,11 @@ import java.awt.EventQueue;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
@@ -52,7 +55,8 @@ public class MainWindow extends JFrame {
 	private Component horizontalGlue_2;
 
 	private TreeSet<String> additionalFolderPaths = new TreeSet<>();
-	private LogRecords logRecords = new LogRecords();
+	private TreeMap<String, Integer> playerNames;
+	private LogRecords logRecords;
 	private int tmpOutputlength = 0;
 
 	/**
@@ -132,49 +136,65 @@ public class MainWindow extends JFrame {
 			OSFileSystem fileSystem = new OSFileSystem(mainWindow);
 			ArrayList<File> minecraftLogFolders = fileSystem.lookForMinecraftLogFolders();
 
-			// analyze all found log files
-
-			addOutput("INFO: Loading log files ... (might take a minute)");
-			TreeMap<String, Integer> playerNames = new TreeMap<String, Integer>();
-			List<MCLogLine> relevantLogLines = new ArrayList<>();
-			final String logLineFilters_regex = logRecords.getLoglinefilterRegex();
-			int counter = 0;
-			int fileCount = 1;
-			File[] files = null;
-			MCLogFile minecraftLogFile = null;
+			// look for log files
+			ArrayList<File> allFiles = new ArrayList<>();
 			for (File minecraftLogFolder : minecraftLogFolders) {
-				files = minecraftLogFolder.listFiles();
-				fileCount = files.length;
-				addOutput("INFO: Loading log files from " + minecraftLogFolder.getAbsolutePath());
-				counter = 0;
-				for (File logFile : files) {
-					if (counter++ % 20 == 0)
-						addOutputTemporaryly(
-								"INFO: Loading " + fileCount + " files - " + (counter * 100 / fileCount) + "%");
-					try {
-						minecraftLogFile = new MCLogFile(logFile);
-						relevantLogLines.addAll(minecraftLogFile.filterLines(logLineFilters_regex));
-						String name = minecraftLogFile.getPlayerName();
-						if (name != null)
-							playerNames.put(name, playerNames.getOrDefault(name, 0) + 1);
-					} catch (FileNotFoundException ignored) {
-					} catch (IOException ignored) {
+				addOutput("INFO: Gathering log files from " + minecraftLogFolder.getAbsolutePath());
+				for (File logFile : minecraftLogFolder.listFiles())
+					allFiles.add(logFile);
+			}
+
+			// analyze all found log files
+			addOutput("INFO: Loading log files (this might take a minute)");
+			Collections.sort(allFiles, new Comparator<File>() {
+				@Override
+				public int compare(File f1, File f2) {
+					long tmp = getCreationTime(f1) - getCreationTime(f2);
+					return tmp < 0 ? -1 : tmp > 0 ? 1 : 0;
+				}
+			});
+			int counter = 0;
+			String lastLoginName = null;
+			int fileCount = allFiles.size();
+			MCLogFile minecraftLogFile = null;
+			logRecords = new LogRecords();
+			playerNames = new TreeMap<String, Integer>();
+			String logLineFilters_regex;
+			List<MCLogLine> relevantLogLines = new ArrayList<>();
+			for (File logFile : allFiles) {
+				if (counter++ % 50 == 0)
+					addOutputTemporaryly(
+							"INFO: Loading " + fileCount + " files - " + (counter * 100 / fileCount) + "%");
+				try {
+					minecraftLogFile = new MCLogFile(logFile);
+					if (minecraftLogFile.getPlayerName() != null) {
+						lastLoginName = minecraftLogFile.getPlayerName();
+						playerNames.put(lastLoginName, playerNames.getOrDefault(lastLoginName, 0) + 1);
 					}
+					logLineFilters_regex = lastLoginName == null ? logRecords.getDefaultLoglineFilterRegex()
+							: logRecords.getNameDependentLoglineFilterRegex(lastLoginName);
+					relevantLogLines.addAll(minecraftLogFile.filterLines(logLineFilters_regex, lastLoginName));
+				} catch (FileNotFoundException ignored) {
+				} catch (IOException ignored) {
 				}
 			}
-			Collections.sort(relevantLogLines);
+			String name = playerNames.entrySet().stream().max((a, b) -> a.getValue() - b.getValue()).get().getKey();
+			for (MCLogLine l : relevantLogLines) {
+				if (l.getPlayerName() == null)
+					l.setPlayerName(name);
+				else
+					break;
+			}
+			addOutput("INFO: Found most logins from " + name);
 
 			// count floor 7 runs with S+ score and count Hadle's and Kismet feathers
-			addOutput("INFO: Analyzing log lines ...");
+			addOutput("INFO: Analyzing log lines");
 
 			for (int i = 0; i < relevantLogLines.size(); i++)
 				i = logRecords.add(i, relevantLogLines);
 
-			String name = playerNames.entrySet().stream().max((a, b) -> a.getValue() - b.getValue()).get().getKey();
-			addOutput("INFO: Found most logins from " + name);
-
 			// send data to google form
-			addOutput("INFO: Sending collected data to associated Google Form ...");
+			addOutput("INFO: Sending collected data to associated Google Form");
 			GoogleFormApi api = new GoogleFormApi("1FAIpQLSffEH7mVGTbzxWM4_AuAlvJzOFLtVt41Er7re8maAsaiUT68Q");
 			api.put(651714876, name); // name id
 			api.put(94270834, logRecords.get("extra.d.f7.S+").toString()); // runs
@@ -236,6 +256,7 @@ public class MainWindow extends JFrame {
 	private void startAnalysis() {
 		defaultButton.setEnabled(false);
 		addFoldersButton.setEnabled(false);
+		outputTextField.setText("");
 		Thread t0 = new Thread() {
 			@Override
 			public void run() {
@@ -260,6 +281,14 @@ public class MainWindow extends JFrame {
 		String oldText = outputTextField.getText();
 		outputTextField.setText(oldText.substring(0, oldText.length() - tmpOutputlength) + s);
 		tmpOutputlength = s.length();
+	}
+
+	private long getCreationTime(File file) {
+		try {
+			return Files.readAttributes(file.toPath(), BasicFileAttributes.class).creationTime().toMillis();
+		} catch (IOException ignored) {
+		}
+		return 0;
 	}
 
 	public TreeSet<String> getAdditionalFolderPaths() {

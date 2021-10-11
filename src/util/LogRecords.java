@@ -2,6 +2,7 @@ package util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
@@ -10,6 +11,9 @@ import java.util.regex.Pattern;
 public class LogRecords extends TreeMap<String, TimeslotMap> {
 	private static final long serialVersionUID = 1L;
 	private String allLines;
+	private HashMap<String, String> allLinesNameDependent = new HashMap<>();
+
+	// dungeons
 	private final String[] dungeonMainLines = { "The Catacombs - Floor [VI]+", "Master Mode Catacombs - Floor [VI]+" };
 	private final String dungeonScoreLine = "Team Score: [0-9]+ [\\(][SABCD][+]?[\\)].*";
 	private final String[] dungeonLootLines = { "Necron's Handle", "Wither Chestplate",
@@ -21,21 +25,37 @@ public class LogRecords extends TreeMap<String, TimeslotMap> {
 			"Adaptive Blade", "Adaptive Chestplate", "Spirit Pet", "Enchanted Book \\(Rend [I]+\\)", "Dark Orb",
 			"Enchanted Book \\(Overload I\\)" };
 
+	// slayers
 	private String startedSlayer = null;
 	private final String[] slayerLines = { ".5... .7Slay ..[0-9,]+ Combat XP .7worth of [A-Z][a-z]+.7.",
 			"[A-Z][a-z]+ Slayer LVL [0-9]+ - Next LVL in [0-9,]+ XP!" };
 	private MCLogLine lastRareDrop = null;
-	private String[] rareDropLines = { "[A-Z ]+ DROP![ ]{1,2}[\\(]?[a-zA-Z ]*[a-zA-Z]+[\\)]?( \\(\\+[0-9]+% Magic Find!\\))?" };
+	private String[] rareDropLines = {
+			"[A-Z ]+ DROP![ ]{1,2}[\\(]?[a-zA-Z ]*[a-zA-Z]+[\\)]?( \\(\\+[0-9]+% Magic Find!\\))?" };
 	private String[] slayerLootLines = { "[A-Z ]+ DROP![ ]{1,2}[\\(]?item[\\)]?( \\(\\+[0-9]+% Magic Find!\\))?" };
 	private final String[] slayerItems = { "Beheaded Horror", "Scythe Blade", "Shard of the Shredded", "Warden Heart",
 			"Fly Swatter", "Tarantula Talisman", "Digested Mosquito", "Red Claw Egg", "Couture Rune I",
 			"Overflux Capacitor", "Grizzly Bait", "Pocket Espresso Machine", "Judgement Core", "Handy Blood Chalice",
 			"Exceedingly Rare Ender Artifact Upgrader", "Void Conqueror Enderman Skin" };
 
+	// inventory
 	private String[] inventoryChangeLines = { "You [a-z]+ item.+", "You collected [0-9,]+ coins from selling item .+",
 			"Market You bought [0-9]+ x item .+", "You bought back item x[0-9,]+ .+",
 			"Bazaar! Claimed [0-9]+x item worth [0-9,]+ coins bought .+", "[+-] [0-9]+x item" };
 	private final String[] monitoredItems = { "Kismet Feather" };
+
+	// dragons
+	private final String[] dragonLines = { ". You placed a Summoning Eye!( Brace yourselves!)? \\([0-8]/8\\)",
+			"You recovered a Summoning Eye!", "[A-Z]+ DRAGON DOWN!",
+			"Your Damage: [0-9,]+( \\(NEW RECORD!\\))? \\(Position #[0-9]+\\)" };
+
+	// other bosses
+	// TODO HORSEMAN HORSE, ARACHNE, MAGMA CUBE BOSS,
+
+	// name dependent
+	private String[] nameDependentLines = { "(\\[[A-Z\\+]+\\] )? username has obtained item!" };
+	// TODO add obtainable items
+	private String[] obtainableItems = { "[A-Z]+[a-z]+ Dragon Chestplate" }; 
 
 	public LogRecords() {
 		// prepare TimeslotMap with 7 day slot duration
@@ -63,6 +83,7 @@ public class LogRecords extends TreeMap<String, TimeslotMap> {
 		allLines_tmp.addAll(Arrays.asList(rareDropLines));
 		allLines_tmp.addAll(Arrays.asList(slayerLootLines));
 		allLines_tmp.addAll(Arrays.asList(inventoryChangeLines));
+		allLines_tmp.addAll(Arrays.asList(dragonLines));
 		StringBuilder sb = new StringBuilder();
 		boolean isFirstElement = true;
 		for (String s : allLines_tmp) {
@@ -187,6 +208,7 @@ public class LogRecords extends TreeMap<String, TimeslotMap> {
 				return --lineIndex;
 			}
 		}
+		// TODO add dragons
 		return lineIndex;
 	}
 
@@ -220,7 +242,26 @@ public class LogRecords extends TreeMap<String, TimeslotMap> {
 		return super.get(key.toString());
 	}
 
-	public String getLoglinefilterRegex() {
+	public String getDefaultLoglineFilterRegex() {
 		return allLines;
+	}
+
+	public String getNameDependentLoglineFilterRegex(String userName) {
+		String res = allLinesNameDependent.get(userName);
+		if (res != null)
+			return allLines + res;
+		ArrayList<String> nameDependentLines_tmp = new ArrayList<>();
+		for (String item : obtainableItems)
+			for (String regex : nameDependentLines)
+				nameDependentLines_tmp.add(regex.replace("username", userName).replace("item", item));
+		slayerLootLines = nameDependentLines_tmp.toArray(new String[0]);
+		StringBuilder sb = new StringBuilder();
+		for (String s : nameDependentLines_tmp) {
+			sb.append("|(");
+			sb.append(s);
+			sb.append(")");
+		}
+		allLinesNameDependent.put(userName, sb.toString());
+		return allLines + sb.toString();
 	}
 }
