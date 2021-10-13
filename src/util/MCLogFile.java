@@ -21,8 +21,8 @@ public class MCLogFile {
 	private String playerName;
 	private Stream<String> linesStream;
 
-	public MCLogFile(File logFile) throws FileNotFoundException, IOException {
-		creationTime = getCreationTime(logFile);
+	public MCLogFile(File logFile, File previousLogFile) throws FileNotFoundException, IOException {
+		creationTime = previousLogFile != null ? getCreationTime(previousLogFile) : getCreationTime(logFile) - 21600000;
 		startingTimeOfFile = null;
 		InputStream inputStream = new FileInputStream(logFile);
 		if (logFile.getName().endsWith(".gz"))
@@ -63,10 +63,10 @@ public class MCLogFile {
 		if (!creationTimeLine.matches("[0-9:]{8}"))
 			return creationTimeFile;
 		String[] array = creationTimeLine.split(":");
-		long msFromStartOfDay = Integer.parseInt(array[0]) * 3600 + Integer.parseInt(array[1]) * 60
-				+ Integer.parseInt(array[2]) * 1000;
-		if (this.startingTimeOfFile == null)
-			this.startingTimeOfFile = msFromStartOfDay;
+		long msFromStartOfDay = (Integer.parseInt(array[0]) * 3600 + Integer.parseInt(array[1]) * 60
+				+ Integer.parseInt(array[2])) * 1000;
+		if (startingTimeOfFile == null)
+			startingTimeOfFile = msFromStartOfDay;
 		return creationTimeFile + (msFromStartOfDay - startingTimeOfFile);
 	}
 }

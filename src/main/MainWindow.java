@@ -141,7 +141,8 @@ public class MainWindow extends JFrame {
 			for (File minecraftLogFolder : minecraftLogFolders) {
 				addOutput("INFO: Gathering log files from " + minecraftLogFolder.getAbsolutePath());
 				for (File logFile : minecraftLogFolder.listFiles())
-					allFiles.add(logFile);
+					if (logFile.getName().matches("[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]+\\.log\\.gz|latest\\.log"))
+						allFiles.add(logFile);
 			}
 
 			// analyze all found log files
@@ -149,7 +150,7 @@ public class MainWindow extends JFrame {
 			Collections.sort(allFiles, new Comparator<File>() {
 				@Override
 				public int compare(File f1, File f2) {
-					long tmp = getCreationTime(f1) - getCreationTime(f2);
+					long tmp = getLastModifiedTime(f1) - getLastModifiedTime(f2);
 					return tmp < 0 ? -1 : tmp > 0 ? 1 : 0;
 				}
 			});
@@ -166,7 +167,7 @@ public class MainWindow extends JFrame {
 					addOutputTemporaryly(
 							"INFO: Loading " + fileCount + " files - " + (counter * 100 / fileCount) + "%");
 				try {
-					minecraftLogFile = new MCLogFile(logFile);
+					minecraftLogFile = new MCLogFile(logFile, getPreviousFileInFolder(counter, allFiles));
 					if (minecraftLogFile.getPlayerName() != null) {
 						lastLoginName = minecraftLogFile.getPlayerName();
 						playerNames.put(lastLoginName, playerNames.getOrDefault(lastLoginName, 0) + 1);
@@ -237,6 +238,17 @@ public class MainWindow extends JFrame {
 		}
 	}
 
+	private File getPreviousFileInFolder(int counter, ArrayList<File> allFiles) {
+		File current = allFiles.get(counter - 1);
+		File previous = null;
+		for (int i = counter - 1; i > 0; i--) {
+			previous = allFiles.get(i - 1);
+			if (previous.getParentFile().equals(current.getParentFile()) && previous.getName().endsWith(".gz"))
+				return previous;
+		}
+		return null;
+	}
+
 	/**
 	 * Launch the application.
 	 */
@@ -283,9 +295,9 @@ public class MainWindow extends JFrame {
 		tmpOutputlength = s.length();
 	}
 
-	private long getCreationTime(File file) {
+	private long getLastModifiedTime(File file) {
 		try {
-			return Files.readAttributes(file.toPath(), BasicFileAttributes.class).creationTime().toMillis();
+			return Files.readAttributes(file.toPath(), BasicFileAttributes.class).lastModifiedTime().toMillis();
 		} catch (IOException ignored) {
 		}
 		return 0;
