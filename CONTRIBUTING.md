@@ -12,7 +12,7 @@
 1. Log into github
 2. Fork this repository
 3. Clone the project to your local machine 
-    - git command, Android Studio or some GUI (I for example used SourceTree)
+    - git command, Eclipse or some GUI (I for example used SourceTree)
 4. Import the projekt into Eclipse
 5. (Wait for the project to fully load)
 6. Now you can change files and test the application
